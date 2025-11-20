@@ -1,60 +1,104 @@
-name: CI/CD Spring Boot
+# Nome do workflow (aparecerá no dashboard do GitHub Actions)
+name: CI/CD Básico da API da Fatec
 
+# Eventos que disparam este workflow
 on:
   push:
-    branches: ["main"] 
-    paths-ignore:
-      - 'README.md'       
-      - 'docs/**'         
-      - 'LICENSE'         
-      - 'CONTRIBUTING.md' 
+    branches:
+      - docker # Executa sempre que houver um push na branch 'main'
   pull_request:
-    branches: ["main"] 
-    paths-ignore:
-      - 'README.md'      
-      - 'docs/**'         
-      - 'LICENSE'         
-      - 'CONTRIBUTING.md' 
+    branches:
+      - docker # Executa sempre que um Pull Request for aberto para a branch 'main'
 
+# Definição dos jobs
 jobs:
+
+  # ==============================
+  # Job de CI (Integração Contínua)
+  # ==============================
   ci:
-    runs-on: ubuntu-latest
+    name: Build (CI)
+    runs-on: ubuntu-latest  # O sistema operacional da máquina virtual que executará o job
 
     steps:
-      - name: Checkout do código
+      - name: Checkout do Repositório
+        # Action oficial para clonar o código do repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Java 21
+      - name: Configurar o JDK 21
+        # Action oficial para instalar a versão correta do Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Executar testes
-        run: mvn -B verify --file pom.xml
+      - name: Compilar o Projeto com Maven
+        run: |
+          echo "=========================================="
+          echo "    Iniciando a etapa de BUILD do Maven..."
+          echo "=========================================="
+          echo " Use o comando -DskipTests para pular os testes"
+          mvn clean package
+          echo "=========================================="
+          echo "    BUILD do Maven concluído!"
+          echo "=========================================="
 
-  cd:
-      needs: ci
 
-      if: github.ref == 'refs/heads/main'
+  # ==============================
+  # Job de CD (Implantação Contínua)
+  # ==============================
+  cd-docker-and-deploy:
+    name: Docker e Implantação (CD)
+    runs-on: ubuntu-latest
+    needs: [ci]  # Este job só será executado se o job 'ci' for bem-sucedido
 
-      runs-on: ubuntu-latest
-
-      steps:
-      - name: Fazer checkout do código
+    steps:
+      - name: Checkout do Repositório
+        # Necessário para que este job tenha acesso aos arquivos (como o Dockerfile)
         uses: actions/checkout@v4
 
-      - name: Configurar Java 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
+      - name: Construir a Imagem Docker
+        run: |
+          echo "=========================================="
+          echo "    Iniciando a etapa de DOCKER BUILD..."
+          echo "=========================================="
+          docker build -t fatec-simple-api-image .
+          echo "=========================================="
+          echo "    DOCKER BUILD concluído!"
+          echo "=========================================="
 
-      - name: Gerar JAR para deploy
-        run: mvn -B package --file pom.xml -DskipTests
+      - name: Simular Login no Docker Registry e Push da Imagem
+        run: |
+          echo "==========================================================="
+          echo "    Simulando login no Docker Hub / GitHub Container Registry..."
+          echo "    docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN"
+          echo "    Simulando o 'docker push' da imagem..."
+          echo "    docker push fatec-simple-api-image:latest"
+          echo "==========================================================="
+          echo "    Push da imagem simulado!"
+          echo "==========================================================="
 
-      - name: Upload JAR para deploy
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: target/*.jar
+      # Exemplo de implantação com via SSH
+      - name: Simular a Implantação em Servidor Próprio (via SSH)
+        run: |
+          echo "=========================================================="
+          echo "    Simulando o deploy em um servidor próprio via SSH..."
+          echo "=========================================================="
+          echo "    Na vida real, esta etapa usaria uma action de SSH (ex: appleboy/ssh-action) ou um script para:"
+          echo " "
+          echo "    1. Conectar via SSH no servidor:"
+          echo "    ssh -i ~/.ssh/id_rsa usuario@dominio.com"
+          echo " "
+          echo "    2. Parar e remover o contêiner antigo (se existir):"
+          echo "    docker stop fatec-simple-api && docker rm fatec-simple-api"
+          echo " "
+          echo "    3. Puxar a nova imagem do Docker Registry para o servidor:"
+          echo "    docker pull fatec-simple-api-image:latest"
+          echo " "
+          echo "    4. Executar o novo contêiner com a imagem atualizada:"
+          echo "    docker run -d --name fatec-simple-api -p 8080:8080 fatec-simple-api-image:latest"
+          echo " "
+          echo "=========================================================="
+          echo "    Deploy em servidor próprio simulado com sucesso!"
+          echo "=========================================================="
