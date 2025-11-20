@@ -1,5 +1,7 @@
-# Estágio 1: Build da aplicação com Maven
+# ========================================================
+# Estágio 1: Build da aplicação (Builder Stage)
 # Usamos uma imagem base que já contém o Maven e o JDK 21
+# ========================================================
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 
 # Define o diretório de trabalho dentro do contêiner
@@ -12,17 +14,22 @@ COPY pom.xml .
 COPY src ./src
 
 # Executa o build do Maven. O -DskipTests pula a execução dos testes para acelerar o build.
+# Obs: É importante garantir que o 'target' seja gerado antes de copiar!
 RUN mvn clean package
 
 
-# Estágio 2: Execução da aplicação
-# Usamos uma imagem base slim do OpenJDK 21, que é menor e mais segura
-FROM openjdk:21-slim
+# ========================================================
+# Estágio 2: Execução da aplicação (Final Stage)
+# Usamos uma imagem base slim do Temurin 21 (JRE), 
+# que é menor, mais segura e consistente com o estágio 1.
+# ========================================================
+FROM eclipse-temurin:21-jre-jammy
 
 # Define o diretório de trabalho
 WORKDIR /app
 
 # Copia o arquivo .jar gerado no estágio de build para o contêiner final
+# O padrão 'target/*.jar' garantirá que o nome do JAR (ex: nome-da-api-1.0.0.jar) seja encontrado.
 COPY --from=build /app/target/*.jar app.jar
 
 # Expõe a porta 8080, que é a porta padrão do Spring Boot
